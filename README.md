@@ -11,7 +11,7 @@
 
 ## 安装
 
-```bash
+```powershell
 go build -o nacos-cli
 ```
 
