@@ -53,6 +53,16 @@ func NewClient(serverURL, username, password, namespace string) *Client {
 }
 
 func (c *Client) Login() (*LoginResponse, error) {
+	if strings.TrimSpace(c.ServerURL) == "" {
+		return nil, fmt.Errorf("服务器地址未设置，请先运行 'nacos-cli user server <url>'")
+	}
+	if !strings.HasPrefix(c.ServerURL, "http://") && !strings.HasPrefix(c.ServerURL, "https://") {
+		return nil, fmt.Errorf("服务器地址缺少协议前缀，请使用 http:// 或 https://")
+	}
+	if strings.TrimSpace(c.Username) == "" || strings.TrimSpace(c.Password) == "" {
+		return nil, fmt.Errorf("用户名或密码未设置，请先运行 'nacos-cli user set <username> <password>'")
+	}
+
 	data := url.Values{}
 	data.Set("username", c.Username)
 	data.Set("password", c.Password)
@@ -110,6 +120,9 @@ func (c *Client) GetConfig(dataID, group string) (*Config, error) {
 	if c.Namespace != "" {
 		params.Set("tenant", c.Namespace)
 	}
+	if c.Token != "" {
+		params.Set("accessToken", c.Token)
+	}
 
 	// 使用Nacos v1 API
 	url := c.ServerURL + "/nacos/v1/cs/configs?" + params.Encode()
@@ -121,7 +134,7 @@ func (c *Client) GetConfig(dataID, group string) (*Config, error) {
 	}
 
 	if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
+		req.Header.Set("accessToken", c.Token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -157,6 +170,9 @@ func (c *Client) PublishConfig(config *Config) error {
 	if c.Namespace != "" {
 		data.Set("tenant", c.Namespace)
 	}
+	if c.Token != "" {
+		data.Set("accessToken", c.Token)
+	}
 
 	// 使用Nacos v1 API
 	url := c.ServerURL + "/nacos/v1/cs/configs"
@@ -169,7 +185,7 @@ func (c *Client) PublishConfig(config *Config) error {
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
+		req.Header.Set("accessToken", c.Token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -193,6 +209,9 @@ func (c *Client) DeleteConfig(dataID, group string) error {
 	if c.Namespace != "" {
 		params.Set("tenant", c.Namespace)
 	}
+	if c.Token != "" {
+		params.Set("accessToken", c.Token)
+	}
 
 	// 使用Nacos v1 API
 	url := c.ServerURL + "/nacos/v1/cs/configs?" + params.Encode()
@@ -204,7 +223,7 @@ func (c *Client) DeleteConfig(dataID, group string) error {
 	}
 
 	if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
+		req.Header.Set("accessToken", c.Token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)

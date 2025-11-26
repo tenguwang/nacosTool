@@ -209,26 +209,39 @@ var exportConfigCmd = &cobra.Command{
 			return nil
 		}
 
-		// 否则导出所有配置
-		configs, err := client.ListConfigs(1, 1000)
-		if err != nil {
-			return err
-		}
-
+		// 否则导出所有配置，逐页遍历避免漏数据
+		pageNo := 1
+		pageSize := 100
 		exportCount := 0
-		for _, config := range configs {
-			fullConfig, err := client.GetConfig(config.DataID, config.Group)
+
+		for {
+			configs, err := client.ListConfigs(pageNo, pageSize)
 			if err != nil {
-				fmt.Printf("获取配置 %s@%s 失败: %v\n", config.DataID, config.Group, err)
-				continue
+				return err
+			}
+			if len(configs) == 0 {
+				break
 			}
 
-			if err := exportSingleConfig(outputDir, fullConfig); err != nil {
-				fmt.Printf("导出配置 %s@%s 失败: %v\n", config.Group, config.DataID, err)
-				continue
+			for _, config := range configs {
+				fullConfig, err := client.GetConfig(config.DataID, config.Group)
+				if err != nil {
+					fmt.Printf("获取配置 %s@%s 失败: %v\n", config.DataID, config.Group, err)
+					continue
+				}
+
+				if err := exportSingleConfig(outputDir, fullConfig); err != nil {
+					fmt.Printf("导出配置 %s@%s 失败: %v\n", config.Group, config.DataID, err)
+					continue
+				}
+
+				exportCount++
 			}
 
-			exportCount++
+			if len(configs) < pageSize {
+				break
+			}
+			pageNo++
 		}
 
 		fmt.Printf("配置导出完成，共导出 %d 个配置到 %s\n", exportCount, outputDir)
